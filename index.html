@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- No third-party code: only this site's scripts may run, and only Supabase may be fetched. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src data:; connect-src https://vakzpjtoqvzxmilqnbwr.supabase.co; base-uri 'none'; form-action 'none'" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="description" content="End-to-end encrypted pastebin with burn after read and expiring links." />
+  <title>bin.harsath.com</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23ea580c'/%3E%3Cpath d='M11.5 15v-3a4.5 4.5 0 0 1 9 0v3' fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round'/%3E%3Crect x='8.5' y='14.5' width='15' height='11' rx='2.5' fill='white'/%3E%3C/svg%3E" />
+  <style>
+    :root {
+      /* matte black: soft charcoal, not pure black */
+      --bg: #1b1b1d; --surface: #232326; --surface-2: #1f1f22; --border: #323236; --border-strong: #46464c;
+      --text: #ebebed; --muted: #a8a8af; --faint: #74747b;
+      --ink: #ebebed; --ink-text: #1b1b1d; --ink-hover: #ffffff;
+      --ember: #f2711f; --ember-hover: #f5874a; --ember-soft: #2b1f17; --ember-line: #523019; --ember-text: #f7a06a;
+      --err: #f87171;
+      --seg-bg: #1b1b1d; --seg-on: #34343a;
+      --ring: rgba(242, 113, 31, .22);
+      --shadow: 0 1px 2px rgba(0, 0, 0, .2), 0 16px 40px -24px rgba(0, 0, 0, .55);
+      --glow: rgba(242, 113, 31, .05);
+      --mono: ui-monospace, 'SF Mono', SFMono-Regular, 'JetBrains Mono', Menlo, Consolas, monospace;
+      --radius: 16px;
+      --title-dim: #7d7d84;
+    }
+
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0; min-height: 100vh; display: flex; flex-direction: column;
+      font: 16px/1.55 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      color: var(--text);
+      background: radial-gradient(1000px 460px at 50% -180px, var(--glow), transparent 70%), var(--bg);
+      background-attachment: fixed;
+    }
+    /* full width with side margins, same as bpa.st */
+    .wrap { width: 100%; padding: 0 26px; flex: 1; display: flex; flex-direction: column; }
+    @media (min-width: 1280px) { .wrap { padding: 0 104px; } }
+    @media (min-width: 1920px) { .wrap { padding: 0 208px; } }
+    .i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    :focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+
+    /* title, same as airdrop.harsath.com */
+    header { padding: 56px 0 32px; }
+    h1 { font-size: clamp(36px, 7vw, 52px); font-weight: 700; letter-spacing: -.03em; line-height: 1.1; margin: 0 0 10px; }
+    h1 a { color: inherit; text-decoration: none; }
+    h1 span { color: var(--title-dim); font-weight: 500; }
+    .sub { margin: 0; color: var(--muted); font-size: 18px; display: flex; align-items: flex-start; gap: 8px; }
+    .sub .i { width: 20px; height: 20px; margin-top: 4px; color: #4ade80; }
+
+    /* buttons */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      font: inherit; font-size: 15px; font-weight: 600; line-height: 1; height: 44px; padding: 0 18px;
+      border: 1px solid transparent; border-radius: 11px; cursor: pointer; text-decoration: none; white-space: nowrap;
+      transition: background .15s, border-color .15s, box-shadow .15s, transform .1s;
+    }
+    .btn:active:not(:disabled) { transform: translateY(1px); }
+    .btn:disabled { opacity: .55; cursor: default; }
+    .btn.primary { background: var(--ink); color: var(--ink-text); }
+    .btn.primary:hover:not(:disabled) { background: var(--ink-hover); }
+    .btn.ember { background: var(--ember); color: #fff; box-shadow: 0 8px 20px -10px var(--ember); }
+    .btn.ember:hover:not(:disabled) { background: var(--ember-hover); }
+    .btn.subtle { background: var(--surface); color: var(--text); border-color: var(--border); }
+    .btn.subtle:hover { background: var(--surface-2); border-color: var(--border-strong); }
+    .btn.sm { height: 34px; padding: 0 12px; font-size: 14px; border-radius: 9px; gap: 6px; }
+    .btn.sm .i { width: 15px; height: 15px; }
+    .btn .ic-done, .btn.copied .ic-copy { display: none; }
+    .btn.copied .ic-done { display: block; }
+
+    /* cards */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+
+    /* editor: a textarea with a line-number gutter that follows its scroll */
+    .editor { overflow: hidden; transition: border-color .15s, box-shadow .15s; }
+    .editor:focus-within { border-color: var(--ember-line); box-shadow: var(--shadow), 0 0 0 4px var(--ring); }
+    /* reader: stats and actions in a row above the paste */
+    .toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 10px; padding-left: 2px; }
+    .head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .stats { font: 500 13.5px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 400; }
+    .stats.over { color: var(--err); }
+    .code { --fs: 15px; --lh: 1.65; --pad: 16px; display: flex; height: clamp(300px, 50vh, 640px); font: var(--fs)/var(--lh) var(--mono); }
+    .code.fit { height: calc(var(--lines, 1) * var(--fs) * var(--lh) + 2 * var(--pad) + 16px); min-height: 150px; max-height: 76vh; }
+    .gutter {
+      flex: none; overflow: hidden; padding: var(--pad) 12px var(--pad) 18px; text-align: right;
+      color: var(--faint); background: var(--surface-2); border-right: 1px solid var(--border);
+      user-select: none; -webkit-user-select: none;
+    }
+    .gutter pre { margin: 0; font: inherit; min-width: 2ch; }
+    .code textarea {
+      flex: 1; min-width: 0; margin: 0; border: 0; outline: 0; resize: none; padding: var(--pad) 20px;
+      background: transparent; color: var(--text); font: inherit; white-space: pre; overflow: auto; tab-size: 4;
+      caret-color: var(--ember);
+    }
+    .code textarea[readonly] { caret-color: transparent; }
+    .code textarea::placeholder { color: var(--faint); }
+    #composeBox { --fs: 16.25px; } /* same as bpa.st: 1.25rem editor, 1.2rem paste */
+    #viewBox { --fs: 15.6px; }
+    .code textarea::selection { background: var(--ring); }
+    /* drag bar under a text box to make it taller or shorter (app.js) */
+    .grip {
+      height: 14px; display: grid; place-items: center; cursor: ns-resize; touch-action: none;
+      border-top: 1px solid var(--border); background: var(--surface-2);
+    }
+    .grip::before { content: ''; width: 40px; height: 4px; border-radius: 2px; background: var(--border-strong); transition: background .15s; }
+    .grip:hover::before, .grip.dragging::before { background: var(--muted); }
+    body.resizing { cursor: ns-resize; user-select: none; -webkit-user-select: none; }
+
+    /* controls above the editor: expiry, burn, size, create */
+    .controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 16px; padding: 10px 10px 10px 16px; margin-bottom: 12px; }
+    .ctl { display: flex; align-items: center; gap: 10px; }
+    .ctl-label { display: flex; align-items: center; gap: 7px; font-weight: 600; color: var(--muted); }
+    .ctl-label .i, label.burn .i { width: 17px; height: 17px; }
+    label.burn {
+      gap: 10px; padding: 6px 8px 6px 12px; border: 1px solid var(--border); border-radius: 12px;
+      font-weight: 600; color: var(--muted); cursor: pointer; transition: background .2s, border-color .2s, color .2s;
+    }
+    label.burn:has(input:checked) { background: var(--ember-soft); border-color: var(--ember-line); color: var(--ember-text); }
+    .ctl.go { margin-left: auto; gap: 14px; }
+    label.burn .switch { margin-left: auto; }
+
+    .seg { display: flex; flex-wrap: wrap; gap: 3px; padding: 4px; background: var(--seg-bg); border: 1px solid var(--border); border-radius: 12px; }
+    .seg label { position: relative; flex: 1 0 auto; }
+    .seg input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+    .seg span {
+      display: block; padding: 7px 13px; border-radius: 8px; text-align: center; white-space: nowrap;
+      font-size: 14.5px; font-weight: 600; color: var(--muted); transition: color .15s, background .15s, box-shadow .15s;
+    }
+    .seg label:hover span { color: var(--text); }
+    .seg input:checked + span { background: var(--seg-on); color: var(--text); box-shadow: 0 1px 2px rgba(0, 0, 0, .25), 0 0 0 1px var(--border-strong); }
+    .seg input:focus-visible + span { outline: 2px solid var(--ember); outline-offset: 1px; }
+
+    .switch { position: relative; width: 46px; height: 28px; flex: none; }
+    .switch input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; z-index: 1; }
+    .track { position: absolute; inset: 0; border-radius: 99px; background: var(--border-strong); transition: background .2s; }
+    .thumb {
+      position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .25); transition: transform .2s cubic-bezier(.3, .7, .4, 1);
+    }
+    .switch input:checked + .track { background: var(--ember); }
+    .switch input:checked + .track .thumb { transform: translateX(18px); }
+    .switch input:focus-visible + .track { outline: 2px solid var(--ember); outline-offset: 2px; }
+
+    .err-msg { color: var(--err); font-size: 14.5px; font-weight: 600; margin: 0; }
+
+    /* centered panels: link ready, burn warning, not found */
+    .panel { max-width: 640px; width: 100%; margin: 28px auto 0; padding: 40px 36px 36px; text-align: center; }
+    .panel h2 { margin: 0 0 8px; font-size: 24px; letter-spacing: -.02em; line-height: 1.2; }
+    .panel > p { margin: 0 auto; max-width: 470px; color: var(--muted); }
+    .panel .err-msg { margin-top: 14px; }
+    .badge { width: 56px; height: 56px; margin: 0 auto 18px; border-radius: 17px; display: grid; place-items: center; }
+    .badge .i { width: 26px; height: 26px; }
+    .badge.ember { background: var(--ember-soft); color: var(--ember); box-shadow: 0 0 0 1px var(--ember-line), 0 10px 30px -12px var(--ember); }
+    .badge.quiet { background: var(--seg-bg); color: var(--muted); }
+    .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 28px; }
+
+    .linkbox { display: flex; gap: 6px; margin: 0 0 10px; padding: 5px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); }
+    .linkbox:focus-within { border-color: var(--ember-line); box-shadow: 0 0 0 4px var(--ring); }
+    .linkbox input { flex: 1; min-width: 0; padding: 0 10px; border: 0; outline: 0; background: transparent; color: var(--text); font: 500 14.5px var(--mono); text-overflow: ellipsis; }
+
+    .linkbar { margin-bottom: 12px; padding: 12px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0 2px; list-style: none; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 99px;
+      font-size: 14px; font-weight: 500; color: var(--muted); background: var(--seg-bg); border: 1px solid var(--border); white-space: nowrap;
+    }
+    .chip .i { width: 15px; height: 15px; }
+    .chip.ember { color: var(--ember-text); background: var(--ember-soft); border-color: var(--ember-line); }
+    .callout {
+      display: flex; align-items: flex-start; gap: 10px; margin: 18px 0 0; padding: 12px 14px; text-align: left;
+      border-radius: 12px; font-size: 15px; color: var(--ember-text); background: var(--ember-soft); border: 1px solid var(--ember-line);
+    }
+    .callout .i { width: 17px; height: 17px; margin-top: 1px; }
+    #burnedBanner { margin: 0 0 14px; }
+
+    .loading { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 120px 0; color: var(--muted); font-size: 14px; }
+    .spinner { width: 28px; height: 28px; border-radius: 50%; border: 2.5px solid var(--border); border-top-color: var(--ember); animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    main > section, .linkbar { animation: rise .35s cubic-bezier(.2, .7, .2, 1) both; }
+    @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+
+    footer { margin-top: auto; padding: 56px 0 28px; text-align: center; font-size: 15px; color: var(--muted); }
+    footer .heart { color: var(--err); }
+    footer a { color: var(--text); text-underline-offset: 3px; }
+
+    @media (max-width: 640px) {
+      .wrap { padding: 0 14px; }
+      header { padding: 32px 0 24px; }
+      .code, #composeBox, #viewBox { --fs: 16px; --lh: 1.55; --pad: 14px; } /* 16px stops iOS zooming in on focus */
+      .code textarea { padding: var(--pad) 14px; }
+      .gutter { padding-left: 12px; padding-right: 10px; }
+      .controls { padding: 12px; }
+      .ctl, .ctl.go { width: 100%; margin: 0; flex-wrap: wrap; }
+      .ctl.go { flex-wrap: wrap; gap: 10px; }
+      .seg { width: 100%; display: grid; grid-template-columns: repeat(5, 1fr); }
+      .seg span { padding: 7px 2px; font-size: 13.5px; }
+      .head-actions { width: 100%; gap: 6px; }
+      .btn.sm { padding: 0 8px; gap: 5px; font-size: 13px; }
+      .ctl.go .btn { width: 100%; }
+      .panel { padding: 32px 18px 28px; }
+      .linkbox { flex-direction: column; }
+      .linkbox input { padding: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></symbol>
+    <symbol id="i-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z" /></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></symbol>
+    <symbol id="i-fork" viewBox="0 0 24 24"><circle cx="12" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><circle cx="18" cy="6" r="3" /><path d="M18 9v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9M12 12v3" /></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" /></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
+    <symbol id="i-ghost" viewBox="0 0 24 24"><path d="M9 10h.01M15 10h.01M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z" /></symbol>
+  </svg>
+
+  <div class="wrap">
+    <header>
+      <h1><a href="./">bin<span>.harsath.com</span></a></h1>
+      <p class="sub"><svg class="i"><use href="#i-lock" /></svg>Data is encrypted and decrypted in the browser using AES-256-GCM.</p>
+    </header>
+
+    <main>
+      <section id="loading" hidden>
+        <div class="loading"><div class="spinner"></div>Decrypting…</div>
+      </section>
+
+      <!-- write a paste -->
+      <section id="compose" hidden>
+        <div class="card controls">
+          <div class="ctl">
+            <span class="ctl-label" id="ttlLabel"><svg class="i"><use href="#i-clock" /></svg>Expires</span>
+            <div class="seg" role="radiogroup" aria-labelledby="ttlLabel">
+              <label><input type="radio" name="ttl" value="5" /><span>5 hours</span></label>
+              <label><input type="radio" name="ttl" value="72" /><span>3 days</span></label>
+              <label><input type="radio" name="ttl" value="168" checked /><span>1 week</span></label>
+              <label><input type="radio" name="ttl" value="720" /><span>1 month</span></label>
+              <label><input type="radio" name="ttl" value="4320" /><span>6 months</span></label>
+            </div>
+          </div>
+          <label class="ctl burn" title="Deleted after the first view">
+            <svg class="i"><use href="#i-flame" /></svg>Burn after read
+            <span class="switch"><input type="checkbox" id="burn" role="switch" /><span class="track"><span class="thumb"></span></span></span>
+          </label>
+          <div class="ctl go">
+            <span class="stats" id="stats"></span>
+            <p class="err-msg" id="composeErr" role="alert" hidden></p>
+            <button class="btn primary" id="create"><svg class="i"><use href="#i-lock" /></svg><span>Create link</span></button>
+          </div>
+        </div>
+
+        <!-- shown after Create link; the editor stays as it is -->
+        <div class="card linkbar" id="linkBar" hidden>
+          <div class="linkbox">
+            <input id="link" readonly aria-label="Paste link" />
+            <button class="btn primary" id="copyLink"><svg class="i ic-copy"><use href="#i-copy" /></svg><svg class="i ic-done"><use href="#i-check" /></svg><span>Copy link</span></button>
+          </div>
+          <ul class="chips">
+            <li class="chip"><svg class="i"><use href="#i-clock" /></svg><span id="linkExpiry"></span></li>
+            <li class="chip ember" id="linkBurn"><svg class="i"><use href="#i-flame" /></svg>Burns after first read: don't open it yourself</li>
+          </ul>
+        </div>
+
+        <div class="card editor">
+          <div class="code" id="composeBox">
+            <div class="gutter" aria-hidden="true"><pre></pre></div>
+            <textarea id="text" wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"
+              placeholder="Paste or type anything…" aria-label="Paste content"></textarea>
+          </div>
+          <div class="grip" title="Drag to resize" aria-hidden="true"></div>
+        </div>
+      </section>
+
+      <!-- opening a burn-after-read link: nothing is fetched until the reader agrees -->
+      <section id="gate" hidden>
+        <div class="card panel">
+          <div class="badge ember"><svg class="i"><use href="#i-flame" /></svg></div>
+          <h2>This paste burns after reading</h2>
+          <p>Opening it deletes it for good.</p>
+          <div class="actions"><button class="btn ember" id="reveal"><svg class="i"><use href="#i-flame" /></svg><span>Open and burn</span></button></div>
+          <p class="err-msg" id="gateErr" role="alert" hidden></p>
+        </div>
+      </section>
+
+      <!-- reading a paste -->
+      <section id="view" hidden>
+        <p class="callout" id="burnedBanner" hidden><svg class="i"><use href="#i-flame" /></svg>
+          <span><strong>Burned.</strong> It's gone from the server. Copy it before you close this tab.</span></p>
+        <div class="toolbar">
+          <span class="stats" id="viewStats"></span>
+          <span class="head-actions">
+            <span class="chip" id="viewExpiry"><svg class="i"><use href="#i-clock" /></svg><span></span></span>
+            <button class="btn subtle sm" id="raw"><svg class="i"><use href="#i-file" /></svg>Raw</button>
+            <button class="btn subtle sm" id="copyText"><svg class="i ic-copy"><use href="#i-copy" /></svg><svg class="i ic-done"><use href="#i-check" /></svg><span>Copy</span></button>
+            <button class="btn subtle sm" id="fork"><svg class="i"><use href="#i-fork" /></svg>Fork</button>
+            <a class="btn subtle sm" href="./"><svg class="i"><use href="#i-plus" /></svg>New paste</a>
+          </span>
+        </div>
+        <div class="card editor">
+          <div class="code fit" id="viewBox">
+            <div class="gutter" aria-hidden="true"><pre></pre></div>
+            <textarea id="viewText" wrap="off" readonly spellcheck="false" aria-label="Paste content"></textarea>
+          </div>
+          <div class="grip" title="Drag to resize" aria-hidden="true"></div>
+        </div>
+      </section>
+
+      <section id="missing" hidden>
+        <div class="card panel">
+          <div class="badge quiet"><svg class="i"><use href="#i-ghost" /></svg></div>
+          <h2 id="missingTitle"></h2>
+          <p id="missingText"></p>
+          <div class="actions"><a class="btn primary" href="./"><svg class="i"><use href="#i-plus" /></svg>Create a new paste</a></div>
+        </div>
+      </section>
+    </main>
+
+    <footer>made with <span class="heart" aria-label="love">&#x2665;&#xFE0E;</span> by <a href="https://harsath.com" target="_blank" rel="noopener">@harsath</a></footer>
+
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
