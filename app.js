@@ -120,7 +120,6 @@ function codeBox(box) {
 
 const text = $('#text')
 const updateCompose = codeBox($('#composeBox'))
-const ttl = () => document.querySelector('input[name=ttl]:checked')
 
 function updateStats() {
   updateCompose()
@@ -148,7 +147,7 @@ async function create() {
     const secret = C.newSecret()
     const { id, key } = await C.derivePaste(secret)
     const expires = await rpc('create_paste', {
-      p_id: id, p_data: await C.encryptText(key, text.value), p_hours: Number(ttl().value), p_burn: burn,
+      p_id: id, p_data: await C.encryptText(key, text.value), p_hours: Number($('#ttl').value), p_burn: burn,
     })
     $('#link').value = `${location.origin}${location.pathname}#${secret}`
     history.replaceState(null, '', `${location.pathname}#${secret}`) // the address bar shows the paste; the editor stays

@@ -45,11 +45,9 @@
 
     /* title, same as airdrop.harsath.com */
     header { padding: 56px 0 32px; }
-    h1 { font-size: clamp(36px, 7vw, 52px); font-weight: 700; letter-spacing: -.03em; line-height: 1.1; margin: 0 0 10px; }
+    h1 { font-size: clamp(36px, 7vw, 52px); font-weight: 700; letter-spacing: -.03em; line-height: 1.1; margin: 0; }
     h1 a { color: inherit; text-decoration: none; }
     h1 span { color: var(--title-dim); font-weight: 500; }
-    .sub { margin: 0; color: var(--muted); font-size: 18px; display: flex; align-items: flex-start; gap: 8px; }
-    .sub .i { width: 20px; height: 20px; margin-top: 4px; color: #4ade80; }
 
     /* buttons */
     .btn {
@@ -66,7 +64,7 @@
     .btn.ember:hover:not(:disabled) { background: var(--ember-hover); }
     .btn.subtle { background: var(--surface); color: var(--text); border-color: var(--border); }
     .btn.subtle:hover { background: var(--surface-2); border-color: var(--border-strong); }
-    .btn.sm { height: 34px; padding: 0 12px; font-size: 14px; border-radius: 9px; gap: 6px; }
+    .btn.sm { height: 32px; padding: 0 12px; font-size: 14px; border-radius: 9px; gap: 6px; }
     .btn.sm .i { width: 15px; height: 15px; }
     .btn .ic-done, .btn.copied .ic-copy { display: none; }
     .btn.copied .ic-done { display: block; }
@@ -80,7 +78,7 @@
     /* reader: stats and actions in a row above the paste */
     .toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 10px; padding-left: 2px; }
     .head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .stats { font: 500 13.5px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 400; }
+    .stats { font: 500 13px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 400; }
     .stats.over { color: var(--err); }
     .code { --fs: 15px; --lh: 1.65; --pad: 16px; position: relative; display: flex; height: clamp(300px, 50vh, 640px); font: var(--fs)/var(--lh) var(--mono); }
     .code.fit { height: calc(var(--lines, 1) * var(--fs) * var(--lh) + 2 * var(--pad) + 16px); min-height: 150px; max-height: 76vh; }
@@ -113,40 +111,36 @@
     .grip:hover::before, .grip.dragging::before { background: var(--muted); }
     body.resizing { cursor: ns-resize; user-select: none; -webkit-user-select: none; }
 
-    /* controls above the editor: expiry, burn, size, create */
-    .controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 16px; padding: 10px 10px 10px 16px; margin-bottom: 12px; }
-    .ctl { display: flex; align-items: center; gap: 10px; }
-    .ctl-label { display: flex; align-items: center; gap: 7px; font-weight: 600; color: var(--muted); }
-    .ctl-label .i, label.pill .i { width: 17px; height: 17px; }
+    /* controls above the editor: one compact row of 32px controls that wraps as needed */
+    .controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; padding: 8px 8px 8px 12px; margin-bottom: 10px; }
+    .ctl { display: flex; align-items: center; gap: 8px; }
+    .ctl-label { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--muted); }
+    .ctl-label .i, label.pill .i { width: 15px; height: 15px; }
+    select {
+      appearance: none; -webkit-appearance: none; height: 32px; padding: 0 30px 0 10px; cursor: pointer;
+      font: inherit; font-size: 14px; font-weight: 600; color: var(--text);
+      border: 1px solid var(--border); border-radius: 9px;
+      background: var(--seg-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a8a8af' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 9px center / 14px;
+    }
+    select:hover { border-color: var(--border-strong); }
     label.pill {
-      display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 12px; border: 1px solid var(--border); border-radius: 12px;
-      font-weight: 600; color: var(--muted); cursor: pointer; transition: background .2s, border-color .2s, color .2s;
+      display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 5px 0 10px; border: 1px solid var(--border); border-radius: 9px;
+      font-size: 14px; font-weight: 600; color: var(--muted); white-space: nowrap; cursor: pointer; transition: background .2s, border-color .2s, color .2s;
     }
     label.burn:has(input:checked) { background: var(--ember-soft); border-color: var(--ember-line); color: var(--ember-text); }
-    .ctl.go { margin-left: auto; gap: 14px; }
-    label.pill .switch { margin-left: auto; }
-    .toolbar label.pill { padding: 2px 3px 2px 10px; font-size: 14px; } /* same height as the buttons beside it */
+    label.pill .switch { margin-left: 2px; }
+    .ctl.go { margin-left: auto; gap: 10px; }
+    .ctl.go .btn { padding: 0 16px; }
 
-    .seg { display: flex; flex-wrap: wrap; gap: 3px; padding: 4px; background: var(--seg-bg); border: 1px solid var(--border); border-radius: 12px; }
-    .seg label { position: relative; flex: 1 0 auto; }
-    .seg input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
-    .seg span {
-      display: block; padding: 7px 13px; border-radius: 8px; text-align: center; white-space: nowrap;
-      font-size: 14.5px; font-weight: 600; color: var(--muted); transition: color .15s, background .15s, box-shadow .15s;
-    }
-    .seg label:hover span { color: var(--text); }
-    .seg input:checked + span { background: var(--seg-on); color: var(--text); box-shadow: 0 1px 2px rgba(0, 0, 0, .25), 0 0 0 1px var(--border-strong); }
-    .seg input:focus-visible + span { outline: 2px solid var(--ember); outline-offset: 1px; }
-
-    .switch { position: relative; width: 46px; height: 28px; flex: none; }
+    .switch { position: relative; width: 34px; height: 20px; flex: none; }
     .switch input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; z-index: 1; }
     .track { position: absolute; inset: 0; border-radius: 99px; background: var(--border-strong); transition: background .2s; }
     .thumb {
-      position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff;
+      position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff;
       box-shadow: 0 1px 3px rgba(0, 0, 0, .25); transition: transform .2s cubic-bezier(.3, .7, .4, 1);
     }
     .switch input:checked + .track { background: var(--ember); }
-    .switch input:checked + .track .thumb { transform: translateX(18px); }
+    .switch input:checked + .track .thumb { transform: translateX(14px); }
     .switch input:focus-visible + .track { outline: 2px solid var(--ember); outline-offset: 2px; }
 
     .err-msg { color: var(--err); font-size: 14.5px; font-weight: 600; margin: 0; }
@@ -162,11 +156,11 @@
     .badge.quiet { background: var(--seg-bg); color: var(--muted); }
     .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 28px; }
 
-    .linkbox { display: flex; gap: 6px; margin: 0 0 10px; padding: 5px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); }
+    .linkbox { display: flex; gap: 6px; margin: 0 0 8px; padding: 4px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); }
     .linkbox:focus-within { border-color: var(--ember-line); box-shadow: 0 0 0 4px var(--ring); }
-    .linkbox input { flex: 1; min-width: 0; padding: 0 10px; border: 0; outline: 0; background: transparent; color: var(--text); font: 500 14.5px var(--mono); text-overflow: ellipsis; }
+    .linkbox input { flex: 1; min-width: 0; padding: 0 8px; border: 0; outline: 0; background: transparent; color: var(--text); font: 500 14px var(--mono); text-overflow: ellipsis; }
 
-    .linkbar { margin-bottom: 12px; padding: 12px; }
+    .linkbar { margin-bottom: 10px; padding: 8px; }
     .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0 2px; list-style: none; }
     .chip {
       display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 99px;
@@ -193,6 +187,8 @@
     footer { margin-top: auto; padding: 56px 0 28px; text-align: center; font-size: 15px; color: var(--muted); }
     footer .heart { color: var(--err); }
     footer a { color: var(--text); text-underline-offset: 3px; }
+    footer .enc { display: flex; justify-content: center; align-items: center; gap: 6px; margin: 0 0 6px; }
+    footer .enc .i { width: 16px; height: 16px; color: #4ade80; }
 
     @media (max-width: 640px) {
       .wrap { padding: 0 14px; }
@@ -200,17 +196,11 @@
       .code, #composeBox, #viewBox { --fs: 16px; --lh: 1.55; --pad: 14px; } /* 16px stops iOS zooming in on focus */
       .code textarea { padding: var(--pad) 14px; }
       .gutter { padding-left: 12px; padding-right: 10px; }
-      .controls { padding: 12px; }
-      .ctl, .ctl.go { width: 100%; margin: 0; flex-wrap: wrap; }
-      .ctl.go { flex-wrap: wrap; gap: 10px; }
-      .seg { width: 100%; display: grid; grid-template-columns: repeat(5, 1fr); }
-      .seg span { padding: 7px 2px; font-size: 13.5px; }
+      .controls { padding: 8px; gap: 8px; }
       .head-actions { width: 100%; gap: 6px; }
       .btn.sm { padding: 0 8px; gap: 5px; font-size: 13px; }
-      .ctl.go .btn { width: 100%; }
       .panel { padding: 32px 18px 28px; }
-      .linkbox { flex-direction: column; }
-      .linkbox input { padding: 10px; }
+      .linkbox input { font-size: 13px; }
     }
   </style>
 </head>
@@ -231,7 +221,6 @@
   <div class="wrap">
     <header>
       <h1><a href="./">bin<span>.harsath.com</span></a></h1>
-      <p class="sub"><svg class="i"><use href="#i-lock" /></svg><span>Pastes are encrypted-at-rest using <span style="white-space: nowrap">AES-256-GCM</span>.</span></p>
     </header>
 
     <main>
@@ -243,27 +232,27 @@
       <section id="compose" hidden>
         <div class="card controls">
           <div class="ctl">
-            <span class="ctl-label" id="ttlLabel"><svg class="i"><use href="#i-clock" /></svg>Expires</span>
-            <div class="seg" role="radiogroup" aria-labelledby="ttlLabel">
-              <label><input type="radio" name="ttl" value="5" /><span>5 hours</span></label>
-              <label><input type="radio" name="ttl" value="72" /><span>3 days</span></label>
-              <label><input type="radio" name="ttl" value="168" checked /><span>1 week</span></label>
-              <label><input type="radio" name="ttl" value="720" /><span>1 month</span></label>
-              <label><input type="radio" name="ttl" value="4320" /><span>6 months</span></label>
-            </div>
+            <label class="ctl-label" for="ttl"><svg class="i"><use href="#i-clock" /></svg>Expires</label>
+            <select id="ttl">
+              <option value="5">5 hours</option>
+              <option value="72">3 days</option>
+              <option value="168" selected>1 week</option>
+              <option value="720">1 month</option>
+              <option value="4320">6 months</option>
+            </select>
           </div>
           <label class="ctl pill burn" title="Deleted after the first view">
             <svg class="i"><use href="#i-flame" /></svg>Burn after read
             <span class="switch"><input type="checkbox" id="burn" role="switch" /><span class="track"><span class="thumb"></span></span></span>
           </label>
           <label class="ctl pill" title="Wrap long lines">
-            <svg class="i"><use href="#i-wrap" /></svg>Wrap lines
+            <svg class="i"><use href="#i-wrap" /></svg>Wrap
             <span class="switch"><input type="checkbox" class="wrapToggle" role="switch" checked /><span class="track"><span class="thumb"></span></span></span>
           </label>
           <div class="ctl go">
             <span class="stats" id="stats"></span>
             <p class="err-msg" id="composeErr" role="alert" hidden></p>
-            <button class="btn primary" id="create"><span>Paste!</span></button>
+            <button class="btn primary sm" id="create"><span>Paste!</span></button>
           </div>
         </div>
 
@@ -271,7 +260,7 @@
         <div class="card linkbar" id="linkBar" hidden>
           <div class="linkbox">
             <input id="link" readonly aria-label="Paste link" />
-            <button class="btn primary" id="copyLink"><svg class="i ic-copy"><use href="#i-copy" /></svg><svg class="i ic-done"><use href="#i-check" /></svg><span>Copy link</span></button>
+            <button class="btn primary sm" id="copyLink"><svg class="i ic-copy"><use href="#i-copy" /></svg><svg class="i ic-done"><use href="#i-check" /></svg><span>Copy link</span></button>
           </div>
           <ul class="chips">
             <li class="chip"><svg class="i"><use href="#i-clock" /></svg><span id="linkExpiry"></span></li>
@@ -309,7 +298,7 @@
           <span class="head-actions">
             <span class="chip" id="viewExpiry"><svg class="i"><use href="#i-clock" /></svg><span></span></span>
             <label class="pill" title="Wrap long lines">
-              <svg class="i"><use href="#i-wrap" /></svg>Wrap lines
+              <svg class="i"><use href="#i-wrap" /></svg>Wrap
               <span class="switch"><input type="checkbox" class="wrapToggle" role="switch" checked /><span class="track"><span class="thumb"></span></span></span>
             </label>
             <button class="btn subtle sm" id="raw"><svg class="i"><use href="#i-file" /></svg>Raw</button>
@@ -337,7 +326,10 @@
       </section>
     </main>
 
-    <footer>made with <span class="heart" aria-label="love">&#x2665;&#xFE0E;</span> by <a href="https://harsath.com" target="_blank" rel="noopener">@harsath</a></footer>
+    <footer>
+      <p class="enc"><svg class="i"><use href="#i-lock" /></svg>Pastes are AES-256-GCM encrypted-at-rest</p>
+      made with <span class="heart" aria-label="love">&#x2665;&#xFE0E;</span> by <a href="https://harsath.com" target="_blank" rel="noopener">@harsath</a>
+    </footer>
 
   </div>
 
