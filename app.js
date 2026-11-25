@@ -51,10 +51,14 @@ function fmtExpiry(date) {
 
 // --- line-numbered text box (compose and view) ---
 
+let wrap = true // wrap long lines in both boxes; the Wrap switches change it
+
 function codeBox(box) {
   const ta = box.querySelector('textarea')
   const nums = box.querySelector('.gutter pre')
-  let count = 0
+  const mirror = box.appendChild(document.createElement('div'))
+  mirror.className = 'mirror'
+  mirror.setAttribute('aria-hidden', 'true')
   const sync = () => { nums.style.transform = `translateY(${-ta.scrollTop}px)` }
   ta.addEventListener('scroll', sync)
 
@@ -79,16 +83,37 @@ function codeBox(box) {
     }, { once: true })
   })
 
-  return function update() {
-    const n = ta.value.split('\n').length
-    if (n !== count) {
-      count = n
-      nums.textContent = Array.from({ length: n }, (_, i) => i + 1).join('\n')
-      box.style.setProperty('--lines', n)
+  function update() {
+    const lines = ta.value.split('\n')
+    // With wrapping, a line can take several rows. Lay the lines out in the
+    // hidden mirror (same width and font as the textarea) to count them, so
+    // each number lines up with the start of its line.
+    let rows = null
+    if (wrap && ta.clientWidth) {
+      const cs = getComputedStyle(ta)
+      mirror.style.width = `${ta.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)}px`
+      const frag = document.createDocumentFragment()
+      for (const line of lines) frag.appendChild(document.createElement('div')).textContent = line || '\u200b'
+      mirror.replaceChildren(frag)
+      const lh = parseFloat(cs.lineHeight)
+      rows = Array.from(mirror.children, d => Math.max(1, Math.round(d.getBoundingClientRect().height / lh)))
+      mirror.replaceChildren()
     }
+    nums.textContent = lines.map((_, i) => rows ? i + 1 + '\n'.repeat(rows[i] - 1) : i + 1).join('\n')
+    box.style.setProperty('--lines', rows ? rows.reduce((a, b) => a + b, 0) : lines.length)
     sync()
-    return n
+    return lines.length
   }
+
+  // Re-wrap when the width changes: window resize, scrollbar, box first shown.
+  let width = 0
+  new ResizeObserver(() => {
+    if (ta.clientWidth === width) return
+    width = ta.clientWidth
+    if (wrap) requestAnimationFrame(update)
+  }).observe(ta)
+
+  return update
 }
 
 // --- compose ---
@@ -135,7 +160,7 @@ async function create() {
     setError(ERRORS[e.message] ?? `Couldn't create the link: ${e.message}`)
   } finally {
     btn.disabled = false
-    btn.querySelector('span').textContent = 'Create link'
+    btn.querySelector('span').textContent = 'Paste!'
   }
 }
 
@@ -167,7 +192,7 @@ $('#raw').addEventListener('click', () => {
 })
 
 // Fork: the paste becomes a new, unsaved paste in the editor. Nothing is
-// uploaded until Create link, and the original link is untouched.
+// uploaded until Paste, and the original link is untouched.
 $('#fork').addEventListener('click', () => {
   text.value = $('#viewText').value
   history.replaceState(null, '', location.pathname) // drop the secret from the URL
@@ -234,6 +259,20 @@ async function open(secret) {
     offline(e)
   }
 }
+
+// --- wrap lines (one setting for both boxes) ---
+
+function setWrap(on) {
+  wrap = on
+  for (const t of document.querySelectorAll('.wrapToggle')) t.checked = on
+  for (const box of [$('#composeBox'), $('#viewBox')]) {
+    box.classList.toggle('wrapped', on)
+    box.querySelector('textarea').wrap = on ? 'soft' : 'off'
+  }
+  updateCompose()
+  updateView()
+}
+for (const t of document.querySelectorAll('.wrapToggle')) t.addEventListener('change', () => setWrap(t.checked))
 
 // --- start ---
 

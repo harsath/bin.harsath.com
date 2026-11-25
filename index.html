@@ -82,7 +82,7 @@
     .head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .stats { font: 500 13.5px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 400; }
     .stats.over { color: var(--err); }
-    .code { --fs: 15px; --lh: 1.65; --pad: 16px; display: flex; height: clamp(300px, 50vh, 640px); font: var(--fs)/var(--lh) var(--mono); }
+    .code { --fs: 15px; --lh: 1.65; --pad: 16px; position: relative; display: flex; height: clamp(300px, 50vh, 640px); font: var(--fs)/var(--lh) var(--mono); }
     .code.fit { height: calc(var(--lines, 1) * var(--fs) * var(--lh) + 2 * var(--pad) + 16px); min-height: 150px; max-height: 76vh; }
     .gutter {
       flex: none; overflow: hidden; padding: var(--pad) 12px var(--pad) 18px; text-align: right;
@@ -97,6 +97,10 @@
     }
     .code textarea[readonly] { caret-color: transparent; }
     .code textarea::placeholder { color: var(--faint); }
+    /* Wrap lines: the hidden .mirror copies the textarea's text area so app.js can
+       measure how many rows each line wraps onto and space the line numbers to match. */
+    .code.wrapped textarea, .mirror { white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; }
+    .mirror { position: absolute; top: 0; left: 0; visibility: hidden; pointer-events: none; tab-size: 4; }
     #composeBox { --fs: 16.25px; } /* same as bpa.st: 1.25rem editor, 1.2rem paste */
     #viewBox { --fs: 15.6px; }
     .code textarea::selection { background: var(--ring); }
@@ -113,14 +117,15 @@
     .controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 16px; padding: 10px 10px 10px 16px; margin-bottom: 12px; }
     .ctl { display: flex; align-items: center; gap: 10px; }
     .ctl-label { display: flex; align-items: center; gap: 7px; font-weight: 600; color: var(--muted); }
-    .ctl-label .i, label.burn .i { width: 17px; height: 17px; }
-    label.burn {
-      gap: 10px; padding: 6px 8px 6px 12px; border: 1px solid var(--border); border-radius: 12px;
+    .ctl-label .i, label.pill .i { width: 17px; height: 17px; }
+    label.pill {
+      display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 12px; border: 1px solid var(--border); border-radius: 12px;
       font-weight: 600; color: var(--muted); cursor: pointer; transition: background .2s, border-color .2s, color .2s;
     }
     label.burn:has(input:checked) { background: var(--ember-soft); border-color: var(--ember-line); color: var(--ember-text); }
     .ctl.go { margin-left: auto; gap: 14px; }
-    label.burn .switch { margin-left: auto; }
+    label.pill .switch { margin-left: auto; }
+    .toolbar label.pill { padding: 2px 3px 2px 10px; font-size: 14px; } /* same height as the buttons beside it */
 
     .seg { display: flex; flex-wrap: wrap; gap: 3px; padding: 4px; background: var(--seg-bg); border: 1px solid var(--border); border-radius: 12px; }
     .seg label { position: relative; flex: 1 0 auto; }
@@ -218,6 +223,7 @@
     <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></symbol>
     <symbol id="i-fork" viewBox="0 0 24 24"><circle cx="12" cy="18" r="3" /><circle cx="6" cy="6" r="3" /><circle cx="18" cy="6" r="3" /><path d="M18 9v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9M12 12v3" /></symbol>
     <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" /></symbol>
+    <symbol id="i-wrap" viewBox="0 0 24 24"><path d="M3 6h18M3 12h15a3 3 0 1 1 0 6h-4M3 18h7" /><path d="m16 16-2 2 2 2" /></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
     <symbol id="i-ghost" viewBox="0 0 24 24"><path d="M9 10h.01M15 10h.01M12 2a8 8 0 0 0-8 8v12l3-3 2.5 2.5L12 19l2.5 2.5L17 19l3 3V10a8 8 0 0 0-8-8z" /></symbol>
   </svg>
@@ -225,7 +231,7 @@
   <div class="wrap">
     <header>
       <h1><a href="./">bin<span>.harsath.com</span></a></h1>
-      <p class="sub"><svg class="i"><use href="#i-lock" /></svg>Data is encrypted and decrypted in the browser using AES-256-GCM.</p>
+      <p class="sub"><svg class="i"><use href="#i-lock" /></svg><span>Pastes are encrypted-at-rest using <span style="white-space: nowrap">AES-256-GCM</span>.</span></p>
     </header>
 
     <main>
@@ -246,18 +252,22 @@
               <label><input type="radio" name="ttl" value="4320" /><span>6 months</span></label>
             </div>
           </div>
-          <label class="ctl burn" title="Deleted after the first view">
+          <label class="ctl pill burn" title="Deleted after the first view">
             <svg class="i"><use href="#i-flame" /></svg>Burn after read
             <span class="switch"><input type="checkbox" id="burn" role="switch" /><span class="track"><span class="thumb"></span></span></span>
+          </label>
+          <label class="ctl pill" title="Wrap long lines">
+            <svg class="i"><use href="#i-wrap" /></svg>Wrap lines
+            <span class="switch"><input type="checkbox" class="wrapToggle" role="switch" checked /><span class="track"><span class="thumb"></span></span></span>
           </label>
           <div class="ctl go">
             <span class="stats" id="stats"></span>
             <p class="err-msg" id="composeErr" role="alert" hidden></p>
-            <button class="btn primary" id="create"><svg class="i"><use href="#i-lock" /></svg><span>Create link</span></button>
+            <button class="btn primary" id="create"><span>Paste!</span></button>
           </div>
         </div>
 
-        <!-- shown after Create link; the editor stays as it is -->
+        <!-- shown after Paste; the editor stays as it is -->
         <div class="card linkbar" id="linkBar" hidden>
           <div class="linkbox">
             <input id="link" readonly aria-label="Paste link" />
@@ -270,9 +280,9 @@
         </div>
 
         <div class="card editor">
-          <div class="code" id="composeBox">
+          <div class="code wrapped" id="composeBox">
             <div class="gutter" aria-hidden="true"><pre></pre></div>
-            <textarea id="text" wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"
+            <textarea id="text" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"
               placeholder="Paste or type anything…" aria-label="Paste content"></textarea>
           </div>
           <div class="grip" title="Drag to resize" aria-hidden="true"></div>
@@ -298,6 +308,10 @@
           <span class="stats" id="viewStats"></span>
           <span class="head-actions">
             <span class="chip" id="viewExpiry"><svg class="i"><use href="#i-clock" /></svg><span></span></span>
+            <label class="pill" title="Wrap long lines">
+              <svg class="i"><use href="#i-wrap" /></svg>Wrap lines
+              <span class="switch"><input type="checkbox" class="wrapToggle" role="switch" checked /><span class="track"><span class="thumb"></span></span></span>
+            </label>
             <button class="btn subtle sm" id="raw"><svg class="i"><use href="#i-file" /></svg>Raw</button>
             <button class="btn subtle sm" id="copyText"><svg class="i ic-copy"><use href="#i-copy" /></svg><svg class="i ic-done"><use href="#i-check" /></svg><span>Copy</span></button>
             <button class="btn subtle sm" id="fork"><svg class="i"><use href="#i-fork" /></svg>Fork</button>
@@ -305,9 +319,9 @@
           </span>
         </div>
         <div class="card editor">
-          <div class="code fit" id="viewBox">
+          <div class="code fit wrapped" id="viewBox">
             <div class="gutter" aria-hidden="true"><pre></pre></div>
-            <textarea id="viewText" wrap="off" readonly spellcheck="false" aria-label="Paste content"></textarea>
+            <textarea id="viewText" readonly spellcheck="false" aria-label="Paste content"></textarea>
           </div>
           <div class="grip" title="Drag to resize" aria-hidden="true"></div>
         </div>
